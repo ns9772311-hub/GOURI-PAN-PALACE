@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gouri Pan Palace | Official</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #fffaf5; }
+        .heading { font-family: 'Oswald', sans-serif; }
+        .mic-on { animation: pulse 1s infinite; color: #ef4444 !important; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        @media print { .no-print { display: none; } #billBox { border: none; box-shadow: none; } }
+    </style>
+</head>
+<body class="pb-64">
+
+    <header class="bg-red-800 text-white p-5 text-center shadow-lg no-print">
+        <h1 class="heading text-3xl uppercase tracking-widest">गौरी पान पैलेस</h1>
+        <p class="text-xs font-bold mt-1">प्रो: गौरी शंकर पाराशर (धुमा)</p>
+        <div class="mt-4 flex justify-center gap-3">
+            <a href="tel:6264638406" class="bg-yellow-500 text-red-900 px-5 py-2 rounded-full font-bold text-xs">📞 कॉल करें</a>
+            <button onclick="window.print()" class="bg-white text-red-800 px-5 py-2 rounded-full font-bold text-xs">🖨️ रसीद प्रिंट</button>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 mt-6">
+        <div class="bg-white p-6 rounded-3xl shadow-xl border-2 border-red-50 mb-6 no-print">
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <input id="custIn" type="text" oninput="updateCustInfo()" placeholder="ग्राहक का नाम" class="w-full p-3 bg-gray-50 rounded-2xl outline-none text-sm">
+                <input id="phoneIn" type="number" placeholder="मोबाइल नं." class="w-full p-3 bg-gray-50 rounded-2xl outline-none text-sm">
+            </div>
+
+            <div class="space-y-4">
+                <div class="relative">
+                    <input id="itemIn" type="text" placeholder="सामान का नाम..." class="w-full p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-red-200">
+                    <button id="micBtn" onclick="runMic()" class="absolute right-4 bottom-3 text-2xl">🎤</button>
+                </div>
+                <div class="flex gap-3">
+                    <input id="priceIn" type="number" placeholder="रेट ₹" class="flex-1 p-4 bg-gray-50 rounded-2xl outline-none">
+                    <input id="qtyIn" type="number" value="1" class="w-20 p-4 bg-gray-50 rounded-2xl text-center font-bold">
+                </div>
+                <div class="flex gap-2">
+                    <button id="addBtn" onclick="addItem()" class="flex-1 bg-red-700 text-white py-4 rounded-2xl font-bold shadow-lg uppercase">लिस्ट में जोड़ें +</button>
+                    <button onclick="stockOutAlert()" class="bg-orange-100 text-orange-700 px-4 rounded-2xl font-bold text-xs">खत्म है ❌</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="billBox" class="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
+            <div class="flex justify-between border-b pb-3 mb-4">
+                <div>
+                    <h2 class="heading text-red-800 text-lg uppercase">📝 बिल रसीद</h2>
+                    <p class="text-[11px] font-bold mt-1 text-gray-700">ग्राहक: <span id="custShow">नगद</span></p>
+                </div>
+                <div class="text-right text-[10px] font-bold text-gray-500">
+                    <p id="bDate"></p>
+                    <p id="bTime"></p>
+                </div>
+            </div>
+            
+            <div id="listShow" class="space-y-3 min-h-[50px] mb-6">
+                </div>
+
+            <div class="border-t-2 border-dashed pt-5 flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400">कुल बिल</p>
+                    <p class="text-4xl font-black text-red-800">₹<span id="totalShow">0</span></p>
+                </div>
+                <img id="qrCode" src="" class="w-20 h-20 border-2 p-1 rounded-xl">
+            </div>
+
+            <div class="mt-8 text-center no-print">
+                <a href="https://www.google.com/maps/search/?api=1&query=Dhuma+Madhya+Pradesh" target="_blank" class="text-blue-600 font-bold text-sm">📍 दुकान की लोकेशन (Map)</a>
+            </div>
+        </div>
+    </main>
+
+    <div class="fixed bottom-0 left-0 right-0 bg-white p-4 z-50 rounded-t-[2rem] shadow-2xl no-print space-y-2">
+        <div class="flex gap-2">
+            <button onclick="alert('आज का गल्ला: ₹' + (localStorage.getItem('gpp_sale') || 0))" class="flex-1 bg-yellow-500 text-red-900 py-3 rounded-xl font-bold text-xs uppercase">💰 गल्ला</button>
+            <button onclick="sendWA(true)" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs uppercase">🚀 दुकान पर भेजें</button>
+        </div>
+        <button onclick="sendWA(false)" class="bg-green-600 text-white w-full py-4 rounded-2xl font-black flex items-center justify-center gap-2 text-xl shadow-lg">
+            📲 WhatsApp बिल
+        </button>
+    </div>
+
+    <script>
+        let myCart = []; 
+        let billId = Math.floor(Math.random() * 90000) + 10000;
+
+        window.onload = () => {
+            let now = new Date();
+            document.getElementById('bDate').innerText = now.toLocaleDateString('hi-IN');
+            document.getElementById('bTime').innerText = now.toLocaleTimeString('hi-IN', {hour: '2-digit', minute:'2-digit'});
+            showBill();
+        };
+
+        function updateCustInfo() {
+            document.getElementById('custShow').innerText = document.getElementById('custIn').value || "नगद";
+        }
+
+        function runMic() {
+            let SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) {
+                alert("माइक सपोर्ट नहीं कर रहा");
+                return;
+            }
+            let rec = new SpeechRec();
+            rec.lang = 'hi-IN';
+            
+            // Listening bolne wala alert
+            let utter = new SpeechSynthesisUtterance("Listening");
+            window.speechSynthesis.speak(utter);
+
+            document.getElementById('micBtn').classList.add('mic-on');
+            rec.onresult = (e) => {
+                document.getElementById('itemIn').value = e.results[0][0].transcript;
+                document.getElementById('micBtn').classList.remove('mic-on');
+            };
+            rec.onerror = () => document.getElementById('micBtn').classList.remove('mic-on');
+            rec.start();
+        }
+
+        function stockOutAlert() {
+            let item = document.getElementById('itemIn').value || "सामान";
+            let utter = new SpeechSynthesisUtterance(item + " khatam hai");
+            window.speechSynthesis.speak(utter);
+            alert("⚠️ " + item + " खत्म है!");
+        }
+
+        function addItem() {
+            let nm = document.getElementById('itemIn').value;
+            let pr = document.getElementById('priceIn').value;
+            let qt = document.getElementById('qtyIn').value;
+
+            if(!nm || !pr) {
+                alert("नाम और रेट डालना जरूरी है!");
+                return;
+            }
+
+            myCart.push({ nm, pr: parseInt(pr), qt: parseInt(qt), sub: parseInt(pr) * parseInt(qt) });
+            showBill();
+            
+            // Saaf karein
+            document.getElementById('itemIn').value = "";
+            document.getElementById('priceIn').value = "";
+            document.getElementById('qtyIn').value = "1";
+        }
+
+        function showBill() {
+            let box = document.getElementById('listShow');
+            box.innerHTML = "";
+            let total = 0;
+            
+            if(myCart.length === 0) {
+                box.innerHTML = "<p class='text-center text-gray-300'>अभी कोई सामान नहीं है</p>";
+            } else {
+                myCart.forEach((it, idx) => {
+                    total += it.sub;
+                    box.innerHTML += `<div class='flex justify-between bg-gray-50 p-2 rounded-lg border mb-1 shadow-sm text-sm'>
+                        <span><b>${it.nm}</b> (${it.qt})</span>
+                        <span>₹${it.sub} <button onclick='removeIt(${idx})' class='text-red-500 ml-2 font-bold'>×</button></span>
+                    </div>`;
+                });
+            }
+            
+            document.getElementById('totalShow').innerText = total;
+            // QR Code update
+            document.getElementById('qrCode').src = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=6264638406@ybl&am=" + total + "&pn=Gouri%20Pan%20Palace";
+        }
+
+        function removeIt(idx) {
+            myCart.splice(idx, 1);
+            showBill();
+        }
+
+        function sendWA(toShop) {
+            if(myCart.length === 0) {
+                alert("लिस्ट खाली है!");
+                return;
+            }
+            
+            let total = document.getElementById('totalShow').innerText;
+            let msg = "गौरी पान पैलेस%0A👤 ग्राहक: " + (document.getElementById('custIn').value || "नगद") + "%0A----------------%0A";
+            myCart.forEach(it => msg += "✅ " + it.nm + " (" + it.qt + ") = ₹" + it.sub + "%0A");
+            msg += "----------------%0A*Total: ₹" + total + "*%0A🙏 धन्यवाद!";
+            
+            let ph = toShop ? "6264638406" : (document.getElementById('phoneIn').value || "6264638406");
+            window.open("https://wa.me/91" + ph + "?text=" + msg, '_blank');
+
+            if(toShop) {
+                // Galla save
+                let s = parseInt(localStorage.getItem('gpp_sale') || 0);
+                localStorage.setItem('gpp_sale', s + parseInt(total));
+                // Auto refresh
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
